@@ -1,0 +1,19 @@
+Library 1.72
+Bug fixes to support the latest ESP32 library
+
+Library 1.71
+Bug fixes to support the latest ESP32 library
+
+Library 1.70
+The library supports ESP32 board 
+
+Library 1.64
+Bug fixed: Function vDelay(long time) added
+
+Library 1.63
+Bug fixed: Supports any range of pwm pins
+
+Library 1.62
+Added:  Text Commands
+
+ 
