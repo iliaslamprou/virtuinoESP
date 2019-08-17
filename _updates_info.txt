@@ -1,3 +1,7 @@
+Library 1.8.0
+Added supporting for Virtuino ver 5 "Text Value Display" 
+This library is not compatible with previous libraries. The sketches that use text commands need changes
+
 Library 1.72
 Bug fixes to support the latest ESP32 library
 
