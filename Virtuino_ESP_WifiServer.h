@@ -1,6 +1,6 @@
-/* Virtuino Virtuino_ESP_WifiServer Library ver 1.71
+/* Virtuino general ESP web server Library ver 1.8.0
  * Created by Ilias Lamprou
- * Updated Aug 11 2018
+ * Updated Aug 16 2019
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  */
  
@@ -43,4 +43,3 @@
 
 
 #endif
-

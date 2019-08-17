@@ -1,9 +1,8 @@
-/* Virtuino general ESP web server Library ver 1.72
+/* Virtuino general ESP web server Library ver 1.8.0
  * Created by Ilias Lamprou
- * Updated Aug 11 2018
+ * Updated Aug 16 2019
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  */
-
 
 #ifndef VirtuinoESP_h
 #define VirtuinoESP_h
@@ -63,7 +62,7 @@
 
 
 
-#define esp_firmwareCode  "!C00=1.72$"           // This firmware version
+#define esp_firmwareCode  "!C00=1.8.0$"           // This firmware version
 #define esp_virtualDigitalMemorySize 32          // Size of virtual pins DV type integer
 #define esp_virtualAnalogMemorySize 32           // Size of virtual pins V type float
 
@@ -80,6 +79,9 @@
 #define esp_COMMAND_ERROR  "E00="           
 
 #define esp_TEXT_COMMAND_MAX_SIZE 80               // Set the max supported size of text commands
+
+
+
 //====================================================================
  class VirtuinoESP {
   public:                                            
@@ -93,15 +95,14 @@
   long lastCommunicationTime;                           // The time in millis of last communication with Virtuino app
   boolean DEBUG=false;
   String password=""; 
-
-  //-- Text Command functions
-  void clearTextBuffer();
-  int textAvailable();
-  String getText(byte ID);
-  void sendText(byte ID, String text);
-  String responseBuffer="";
-  String textToSendCommandBuffer="";
+  const char *NO_REPLY= "_NR_";
   
+  
+
+  String responseBuffer="";
+  
+  void setTextReceivedCallback(void (*callback)(uint8_t,String)){textReceivedHandler = callback;}
+  void setTextRequestedCallback(String (*callback)(uint8_t)){textRequestedHandler = callback;}
   private:
   char  getCommandType(char c);
   int  getCommandPin(String* aCommand);
@@ -113,18 +114,17 @@
   byte digitalPinsMap[boardPinsCount] =   digitalPinsMap_ ;
   byte analogInputPinsMap[analogInputPinsCount]  = analogInputPinsMap_  ;
   byte arduinoPinsValue[boardPinsCount] =  digitalPinsMap_;
-  int virtualDigitalMemory[esp_virtualDigitalMemorySize]      {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};                            
-  float virtualFloatMemory[esp_virtualAnalogMemorySize]       {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};                               
+  int virtualDigitalMemory[esp_virtualDigitalMemorySize];      
+  float virtualFloatMemory[esp_virtualAnalogMemorySize];       
   
   
   //-- Text Command functions
-  String textReceivedCommandBuffer="";
   String urlencode(String* str);
   unsigned char h2int(char c);
   String urldecode(String* str);
-  void clearTextByID(byte ID, String* textBuffer);
-  void addTextToReceivedBuffer(byte ID, String* text);
-   
+  
+  void (*textReceivedHandler)(uint8_t,String);
+  String (*textRequestedHandler)(uint8_t); 
  };
 
 
@@ -140,8 +140,3 @@
 //  float vMemoryRead(int memoryIndex);                               read a value of  Virtuino memory             (memoryIndex=0..31, returned a float value
 //  int getPinValue(int pin);                                         read the value of a Pin. Usefull to read the value of a PWM pin
 //  long lastCommunicationTime;                                       Stores the last communication with Virtuino time
-//  void clearTextBuffer();                                           Clear the received text buffer
-//  int textAvailable();                                              Check if there is text in the received buffer
-//  String getText(byte ID);                                          Read the text from Virtuino app
-//  void sendText(byte ID, String text);                              Send text to Virtuino app  
-

@@ -1,6 +1,6 @@
-/* Virtuino general ESP web server Library ver 1.71
+/* Virtuino general ESP web server Library ver 1.8.0
  * Created by Ilias Lamprou
- * Updated Aug 11 2018
+ * Updated Aug 16 2019
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  */
 
@@ -14,10 +14,6 @@
 //  float vMemoryRead(int memoryIndex);                               read a value of  Virtuino memory             (memoryIndex=0..31, returned a float value
 //  int getPinValue(int pin);                                         read the value of a Pin. Usefull to read the value of a PWM pin
 //  long lastCommunicationTime;                                       Stores the last communication with Virtuino time
-//  void clearTextBuffer();                                           Clear the received text buffer
-//  int textAvailable();                                              Check if there is text in the received buffer
-//  String getText(byte ID);                                          Read the text from Virtuino app
-//  void sendText(byte ID, String text);                              Send text to Virtuino app  
 
 #include "VirtuinoESP.h"
 
@@ -84,10 +80,7 @@ void  VirtuinoESP::checkVirtuinoCommand(String* command){
   }
   else  responseBuffer+=getErrorCommand(esp_ERROR_SIZE);         // the size of command is not correct
 
-    if (textToSendCommandBuffer.length()>0) {
-      responseBuffer+=textToSendCommandBuffer;
-      textToSendCommandBuffer="";
-    }
+   
   
 }
 
@@ -170,81 +163,6 @@ String VirtuinoESP::urldecode(String* str){
 }
 
 
-//======================================================================================== clearTextBuffer
-//========================================================================================
-void VirtuinoESP:: clearTextBuffer(){textReceivedCommandBuffer="";}
-
-//======================================================================================== clearTextBuffer
-//========================================================================================
-int VirtuinoESP::  textAvailable(){return textReceivedCommandBuffer.length();}
-  
-//======================================================================================== getTextByID
-//========================================================================================
-String VirtuinoESP:: getText(byte ID){
-   String returnedText="";
-   String ID_string ="";
-   ID_string+=esp_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";       
-   int  pos=textReceivedCommandBuffer.indexOf(ID_string);
-   if (pos>=0) {
-      pos= textReceivedCommandBuffer.indexOf("=",pos);
-      int lastPos=textReceivedCommandBuffer.indexOf("$",pos);
-      returnedText= textReceivedCommandBuffer.substring(pos+1,lastPos);
-      returnedText=urldecode(&returnedText);
-      clearTextByID(ID,&textReceivedCommandBuffer);
-   }
-   return returnedText;
-
-  }
-
-//======================================================================================== clearTextByID
-//========================================================================================
-void VirtuinoESP:: clearTextByID(byte ID, String* textBuffer){
-   String ID_string ="";
-   ID_string+=esp_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";                   // !ID3=
-  int  pos=textBuffer->indexOf(ID_string);
-   if (pos>=0) {
-      int lastPos= textBuffer->indexOf(esp_COMMAND_END_CHAR,pos);
-      textBuffer->remove(pos,lastPos+1);
-   }
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoESP::addTextToReceivedBuffer(byte ID, String* text){
-   clearTextByID(ID,&textReceivedCommandBuffer);
-   textReceivedCommandBuffer+=esp_COMMAND_START_CHAR;
-   textReceivedCommandBuffer+= 'T';
-   if (ID<10) textReceivedCommandBuffer+= '0';
-   textReceivedCommandBuffer+=ID;
-   textReceivedCommandBuffer+= "=";
-   textReceivedCommandBuffer+= *text;
-   textReceivedCommandBuffer+=esp_COMMAND_END_CHAR;
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoESP::sendText(byte ID, String text){
-   clearTextByID(ID,&textToSendCommandBuffer);
-   textToSendCommandBuffer+=esp_COMMAND_START_CHAR;
-   textToSendCommandBuffer+= 'T';
-   if (ID<10) textToSendCommandBuffer+= '0';
-   textToSendCommandBuffer+=ID;
-   textToSendCommandBuffer+= "=";
-   textToSendCommandBuffer+=urlencode(&text); 
-   textToSendCommandBuffer+=esp_COMMAND_END_CHAR;
-  
-  
-}
-
-
    //================================================================= getCommandType
   //This function returns the command type which was received from app
   //The second character of command string determines the command type
@@ -314,7 +232,7 @@ String VirtuinoESP::getErrorCommand(byte code){
    // In this void we have to check if the command is correct and then execute the command 
    // After executing the command we have to send a response to Virtuinio app
       
-    String response=getErrorCommand(esp_ERROR_UNKNOWN); 
+    String response="";//getErrorCommand(esp_ERROR_UNKNOWN); 
     String pinString="";
     int boardPin=-1;
     
@@ -322,16 +240,26 @@ String VirtuinoESP::getErrorCommand(byte code){
     else pinString=String(activeCommandPin);
     float activeCommandValue=0;
     switch (activeCommandType) {
-       case 'T':                         
+       case 'T':
             if ((activeCommandPin>=0) & (activeCommandPin < 100)){
-                response =esp_COMMAND_START_CHAR;
-                response +=activeCommandType;
-                response +=pinString;
-                response +="=";
-                response +=*commandString;
-                response +=esp_COMMAND_END_CHAR;  // response 
-                //String decodeStr=urldecode(commandString);
-                addTextToReceivedBuffer(activeCommandPin,commandString);
+                if (returnInfo) {
+                  if (textRequestedHandler==NULL) return;
+                  String testReply = textRequestedHandler(activeCommandPin);
+                  if (testReply==NO_REPLY) return;
+                  response="";
+                  response =esp_COMMAND_START_CHAR;
+                  response +=activeCommandType;
+                  response +=pinString;
+                  response +="=";
+                  response += urlencode(&testReply);
+                  response +=esp_COMMAND_END_CHAR;  // response 
+                }
+                else {
+                  if (textReceivedHandler!=NULL) {
+                    String decodeStr=urldecode(commandString);
+                    textReceivedHandler(activeCommandPin,decodeStr);
+                  }
+                }
             }
           break;
       case 'I':                         
@@ -411,9 +339,7 @@ String VirtuinoESP::getErrorCommand(byte code){
                       if (activeCommandValue==1) response =esp_firmwareCode;     // return firmware version
                       break;  
            }
-           
        responseBuffer += response;
-       
   }
 
 //=================================================================== getBoardDigitalPin
@@ -460,5 +386,3 @@ void VirtuinoESP::vMemoryWrite(int memoryIndex, float value){
   }
   else return 0;    // error
 }
-
-
